@@ -13,6 +13,10 @@ import (
 
 const output = "./index.html"
 
+type Data struct {
+	Maps map[string]string
+}
+
 func extract(dir string) (map[string]string, error) {
 	fset := token.NewFileSet()
 
@@ -58,9 +62,6 @@ func run(dir, tmp string) error {
 	}
 
 	t := template.Must(template.ParseFiles(tmp))
-	type Data struct {
-		Maps map[string]string
-	}
 	d := Data{Maps: m}
 
 	w, err := os.Create(output)
