@@ -2,22 +2,24 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"html/template"
 	"log"
+	"os"
 	"strings"
 )
 
-func run(dir string) error {
+const output = "./index.html"
+
+func extract(dir string) (map[string]string, error) {
 	fset := token.NewFileSet()
 
 	pkgs, err := parser.ParseDir(fset, dir, nil, parser.ParseComments)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	fmt.Println(pkgs)
 
 	m := map[string]string{}
 
@@ -40,21 +42,44 @@ func run(dir string) error {
 					}
 					m[typeName] = tv.Doc.Text()
 				default:
-					fmt.Println("skip")
+					continue
 				}
 			}
 		}
 	}
 
-	fmt.Print(m)
+	return m, nil
+}
+
+func run(dir, tmp string) error {
+	m, err := extract(dir)
+	if err != nil {
+		return err
+	}
+
+	t := template.Must(template.ParseFiles(tmp))
+	type Data struct {
+		Maps map[string]string
+	}
+	d := Data{Maps: m}
+
+	w, err := os.Create(output)
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+	if err = t.Execute(w, d); err != nil {
+		return err
+	}
 	return nil
 }
 
 func main() {
 	dir := flag.String("d", "", "parse directory")
+	tmp := flag.String("t", "./template.html", "template html file")
 	flag.Parse()
 
-	if err := run(*dir); err != nil {
+	if err := run(*dir, *tmp); err != nil {
 		log.Fatalln(err)
 	}
 }
